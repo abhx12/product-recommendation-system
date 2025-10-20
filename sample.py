@@ -116,9 +116,9 @@ def range_query_avl(node, min_price, max_price, results):
     if max_price > node.product.price:
         range_query_avl(node.right, min_price, max_price, results)
 
-# ------------------------------
+
 # AMAZON SCRAPER
-# ------------------------------
+
 def get_amazon_headers():
     agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -436,15 +436,12 @@ def scrape_flipkart(query, max_results=10):
     try:
         driver.get(url)
         
-        # Wait for product listings to load
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div[data-id]"))
         )
         
-        # Scroll to load more products
         soup = smart_scroll(driver, scroll_count=8, pause=2)
         
-        # Get product containers
         items = soup.select("div[data-id]")
         
         if not items:
@@ -458,14 +455,12 @@ def scrape_flipkart(query, max_results=10):
 
         for idx, item in enumerate(items, 1):
             try:
-                # Product name - primary selector that works
                 name = "N/A"
                 name_tag = item.select_one("a.wjcEIp")
                 
                 if name_tag and name_tag.text.strip():
                     name = name_tag.text.strip()
                 else:
-                    # Fallback selectors if primary fails
                     name_selectors = [
                         "div.KzDlHZ", "a.WKTcLC", "div.syl9yP", 
                         "div._2WkVRV", "a.IRpwTa", "a.s1Q9rs",
@@ -480,7 +475,6 @@ def scrape_flipkart(query, max_results=10):
                             if len(name) > 10:
                                 break
                 
-                # If still not found, try getting text from any link
                 if name == "N/A":
                     links = item.find_all("a", href=True)
                     for link in links:
@@ -489,7 +483,6 @@ def scrape_flipkart(query, max_results=10):
                             name = text
                             break
 
-                # Product link
                 link_tag = item.find("a", href=True)
                 link_href = link_tag['href'] if link_tag else ""
                 if link_href.startswith("/"):
@@ -499,7 +492,6 @@ def scrape_flipkart(query, max_results=10):
                 else:
                     link = "https://www.flipkart.com/" + link_href if link_href else "N/A"
 
-                # Current price
                 price_tag = (item.select_one("div._30jeq3") or 
                             item.select_one("div._3I9_wc") or
                             item.select_one("div._25b18c") or
@@ -507,7 +499,6 @@ def scrape_flipkart(query, max_results=10):
                             item.select_one("div.hl05eU"))
                 price = parse_price(price_tag.text.strip() if price_tag else "N/A")
 
-                # Original price and discount calculation
                 original_price_tag = (item.select_one("div._3Ay6Sb") or 
                                      item.select_one("div._2_R_DZ") or
                                      item.select_one("div._3I9_wc._2p6lqe") or
@@ -519,7 +510,6 @@ def scrape_flipkart(query, max_results=10):
                     if old_price != "N/A" and price != "N/A" and old_price > price:
                         discount = f"{round(((old_price-price)/old_price)*100)}% off"
                 
-                # Sometimes Flipkart shows discount directly
                 if discount == "N/A":
                     discount_tag = (item.select_one("div._3Ay6Sb._31Dcoz") or 
                                    item.select_one("div._3xFhiH") or
@@ -529,7 +519,6 @@ def scrape_flipkart(query, max_results=10):
                         if "off" in discount_text.lower():
                             discount = discount_text
 
-                # Rating
                 rating = "N/A"
                 rating_selectors = [
                     "div.XQDdHH", "div._3LWZlK", "span._1lRcqv",
@@ -545,7 +534,6 @@ def scrape_flipkart(query, max_results=10):
                             rating = match.group()
                             break
                 
-                # Fallback: Estimate rating from star width
                 if rating == "N/A":
                     star_container = item.select_one("div.tV2F7c") or item.select_one("div._1fV99m")
                     if star_container:
@@ -614,7 +602,7 @@ def sort_by_price_asc(products, max_results=10):
             heapq.heappush(heap, (product.price, i, product))  # Min heap for price
             valid_count += 1
     top_products = []
-    for _ in range(min(max_results, valid_count)):
+    for j in range(min(max_results, valid_count)):
         if heap:
             top_products.append(heapq.heappop(heap)[2])
     return top_products
@@ -627,7 +615,7 @@ def sort_by_price_desc(products, max_results=10):
             heapq.heappush(heap, (-product.price, i, product))  # Max heap for price
             valid_count += 1
     top_products = []
-    for _ in range(min(max_results, valid_count)):
+    for j in range(min(max_results, valid_count)):
         if heap:
             top_products.append(heapq.heappop(heap)[2])
     return top_products
@@ -644,9 +632,8 @@ def sort_by_rating(products, max_results=10):
             top_products.append(heapq.heappop(heap)[2])
     return top_products
 
-# ------------------------------
 # RATING-PRICE RECOMMENDATION SYSTEM
-# ------------------------------
+
 def compute_rating_price_score(product):
     rating = parse_rating(product.rating)
     price = product.price
@@ -669,16 +656,16 @@ def get_rating_price_recommendations(products, max_results=10):
     top_products = []
     for _ in range(min(max_results, len(heap))):
         if heap:
-            score, _, product = heapq.heappop(heap)
+            score, j, product = heapq.heappop(heap)
             product.score = -score  # Store score for display
             top_products.append(product)
 
     return top_products, len(valid_products)
 
 # ------------------------------
-# KNAPSACK-BASED RANGE QUERY
+# GREEDY RANGE QUERY 
 # ------------------------------
-def knapsack_range_query(products, min_price, max_price, max_results=10):
+def greedy_range_query(products, min_price, max_price, max_results=10):
     # Filter products in price range using AVL tree
     root = None
     for product in products:
@@ -696,7 +683,7 @@ def knapsack_range_query(products, min_price, max_price, max_results=10):
     # Compute scores
     scores = [compute_rating_price_score(p) for p in range_products]
 
-    # Greedy selection (approximation for knapsack)
+    # Greedy selection 
     indexed_products = [(scores[i], i, range_products[i]) for i in range(len(range_products))]
     indexed_products.sort(reverse=True)  # Sort by score descending
     top_products = []
@@ -706,9 +693,86 @@ def knapsack_range_query(products, min_price, max_price, max_results=10):
 
     return top_products, len(range_products)
 
+
+# NEW: DP BUDGET KNAPSACK (OPTION 7)
+
+def budget_knapsack_dp(products, budget, max_items=5):
+    """
+    DP 0/1 Knapsack: Maximize total score within budget and max_items constraint
+    dp[i][w][k] = max score using first i items, weight <= w, items <= k
+    """
+    valid_products = [p for p in products if p.price != "N/A"]
+    n = len(valid_products)
+    
+    if n == 0:
+        return [], 0, 0
+    
+    # 3D DP Table: dp[i][w][k]
+    dp = [[[0 for _ in range(max_items + 1)] 
+           for _ in range(budget + 1)] 
+           for _ in range(n + 1)]
+    
+    # Track choices for backtracking
+    choice = [[[0 for _ in range(max_items + 1)] 
+               for _ in range(budget + 1)] 
+               for _ in range(n + 1)]
+    
+    # Fill DP Table
+    for i in range(1, n + 1):
+        price = valid_products[i-1].price
+        score = compute_rating_price_score(valid_products[i-1])
+        
+        for w in range(budget + 1):
+            for k in range(max_items + 1):
+                # Skip this item
+                dp[i][w][k] = dp[i-1][w][k]
+                choice[i][w][k] = 0
+                
+                # Take this item if possible
+                if price <= w and k >= 1:
+                    new_score = dp[i-1][w-price][k-1] + score
+                    if new_score > dp[i][w][k]:
+                        dp[i][w][k] = new_score
+                        choice[i][w][k] = 1
+    
+    # Backtrack to reconstruct optimal solution
+    selected = []
+    total_cost = 0
+    i, w, k = n, budget, max_items
+    
+    while i > 0 and w > 0 and k > 0:
+        if choice[i][w][k] == 1:  # Took this item
+            product = valid_products[i-1]
+            product.temp_score = compute_rating_price_score(product)  # Store score
+            selected.append(product)
+            total_cost += product.price
+            w -= product.price
+            k -= 1
+        i -= 1
+    
+    return selected[::-1], dp[n][budget][max_items], total_cost
+
 # ------------------------------
+# NEW: Budget Handler for Option 7
+# ------------------------------
+def handle_budget_knapsack(products):
+    try:
+        budget = int(input("Enter budget (₹): ").strip())
+        max_items = int(input("Max number of products: ").strip())
+        
+        if budget <= 0 or max_items <= 0:
+            print("❌ Budget and max items must be positive!")
+            return [], 0, 0, 0, 0
+        
+        selected_products, total_score, total_cost = budget_knapsack_dp(products, budget, max_items)
+        return selected_products, total_score, total_cost, budget, max_items
+        
+    except ValueError:
+        print("❌ Please enter valid numbers!")
+        return [], 0, 0, 0, 0
+
 # RATING IMPUTATION
-# ------------------------------
+
 def impute_na_ratings(products):
     # Compute average rating from valid ratings
     valid_ratings = [parse_rating(p.rating) for p in products if parse_rating(p.rating) > 0]
@@ -722,9 +786,9 @@ def impute_na_ratings(products):
 
     return na_count, avg_rating
 
-# ------------------------------
+
 # RANGE QUERY HANDLER
-# ------------------------------
+
 def handle_range_query(products):
     try:
         min_price = input("Enter minimum price (₹): ").strip()
@@ -737,9 +801,7 @@ def handle_range_query(products):
         if min_price > max_price:
             print("Minimum price cannot exceed maximum price.")
             return [], None, None
-
-        # Get top 10 products in range using knapsack
-        top_products, valid_count = knapsack_range_query(products, min_price, max_price)
+        top_products, valid_count = greedy_range_query(products, min_price, max_price)
         return top_products, min_price, max_price
 
     except ValueError:
@@ -747,7 +809,7 @@ def handle_range_query(products):
         return [], None, None
 
 # ------------------------------
-# MENU-DRIVEN PROGRAM
+# UPDATED MENU-DRIVEN PROGRAM
 # ------------------------------
 def display_menu():
     print("\nChoose option:")
@@ -755,9 +817,10 @@ def display_menu():
     print("2) Price (Low to High)")
     print("3) Rating (High to Low)")
     print("4) Discount (High to Low)")
-    print("5) Price Range Query (Top 10 by Rating-Price Recommendation)")
-    print("6) Exit")
-    return input("Enter choice (1-6): ").strip()
+    print("5) Price Range Query (Greedy Top 10 by Rating-Price Recommendation)")
+    print("6) Budget Knapsack DP (Maximize Score within Budget)") 
+    print("7) Exit") 
+    return input("Enter choice (1-7): ").strip()
 
 def main():
     product_name = input("Enter product name to search: ").strip()
@@ -823,12 +886,23 @@ def main():
         elif choice == "5":
             top_products, min_price, max_price = handle_range_query(all_products)
             if min_price is not None and max_price is not None:
-                print(f"\nTop 10 Products in Price Range ₹{min_price:.2f} to ₹{max_price:.2f} (Rating-Price Recommendation):")
-        elif choice == "6":
+                print(f"\nTop 10 Products in Price Range ₹{min_price:.2f} to ₹{max_price:.2f} (Greedy Top 10):")
+        elif choice == "6":  
+            top_products, total_score, total_cost, budget, max_items = handle_budget_knapsack(all_products)
+            if top_products:
+                print(f"\n🎒 BUDGET KNAPSACK DP RESULTS")
+                print(f"💰 Budget: ₹{budget} | 📦 Max Items: {max_items}")
+                print(f"✅ Selected: {len(top_products)} items | Total Cost: ₹{total_cost}")
+                print(f"⭐ Total Score: {total_score:.2f}")
+                print("="*60)
+            else:
+                print("\n❌ No valid selection possible for given budget!")
+                top_products = []
+        elif choice == "7": 
             print("Exiting...")
             break
         else:
-            print("Invalid choice. Please enter a number between 1 and 6.")
+            print("Invalid choice. Please enter a number between 1 and 7.")
             continue
 
         # Display results
@@ -839,6 +913,9 @@ def main():
                 print(f"Note: Only {len(top_products)} products available.")
             for i, product in enumerate(top_products, start=1):
                 score_text = f"Score: {product.score:.2f}" if hasattr(product, 'score') else ""
+                # Handle temp_score for budget knapsack
+                if choice == "6" and hasattr(product, 'temp_score'):
+                    score_text = f"Score: {product.temp_score:.2f}"
                 print(f"{i}. {product}{score_text}")
 
 if __name__ == "__main__":
