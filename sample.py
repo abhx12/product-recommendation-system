@@ -761,14 +761,14 @@ def handle_budget_knapsack(products):
         max_items = int(input("Max number of products: ").strip())
         
         if budget <= 0 or max_items <= 0:
-            print("❌ Budget and max items must be positive!")
+            print(" Budget and max items must be positive!")
             return [], 0, 0, 0, 0
         
         selected_products, total_score, total_cost = budget_knapsack_dp(products, budget, max_items)
         return selected_products, total_score, total_cost, budget, max_items
         
     except ValueError:
-        print("❌ Please enter valid numbers!")
+        print("Please enter valid numbers!")
         return [], 0, 0, 0, 0
 
 # RATING IMPUTATION
@@ -840,12 +840,12 @@ def main():
             try:
                 products = future.result()
                 all_products.extend(products)
-                logging.info(f"✅ {future_to_scraper[future]}: {len(products)} products scraped")
+                logging.info(f" {future_to_scraper[future]}: {len(products)} products scraped")
             except Exception as e:
                 logging.error(f"Error in {future_to_scraper[future]}: {e}")
 
     if not all_products:
-        print("❌ No products scraped.")
+        print(" No products scraped.")
         return
 
     # Impute "N/A" ratings globally
@@ -853,7 +853,7 @@ def main():
     print(f"\nImputed {na_count} 'N/A' ratings with average {avg_rating:.1f}")
 
     # Rating-Price Recommendation
-    print("\n🎯 Rating-Price Recommendation (Top 10 Products)")
+    print("\n Rating-Price Recommendation (Top 10 Products)")
     print("="*60)
     top_products, valid_count = get_rating_price_recommendations(all_products)
     if not top_products:
@@ -890,13 +890,13 @@ def main():
         elif choice == "6":  
             top_products, total_score, total_cost, budget, max_items = handle_budget_knapsack(all_products)
             if top_products:
-                print(f"\n🎒 BUDGET KNAPSACK DP RESULTS")
-                print(f"💰 Budget: ₹{budget} | 📦 Max Items: {max_items}")
-                print(f"✅ Selected: {len(top_products)} items | Total Cost: ₹{total_cost}")
-                print(f"⭐ Total Score: {total_score:.2f}")
+                print(f"\n BUDGET KNAPSACK DP RESULTS")
+                print(f" Budget: ₹{budget} | 📦 Max Items: {max_items}")
+                print(f" Selected: {len(top_products)} items | Total Cost: ₹{total_cost}")
+                print(f" Total Score: {total_score:.2f}")
                 print("="*60)
             else:
-                print("\n❌ No valid selection possible for given budget!")
+                print("\n No valid selection possible for given budget!")
                 top_products = []
         elif choice == "7": 
             print("Exiting...")
